@@ -7,58 +7,83 @@ namespace OnlineGame
     internal class AccountService
     {
         private readonly string accountsPath = "Data/accounts.json";
+        private readonly Logger logger;
 
-        public AccountService()
+        public AccountService(Logger logger)
         {
+            this.logger = logger;
             EnsureAccountsFileExists();
         }
 
         public bool Register(string username, string password, out string message)
         {
-            List<AccountRecord> accounts = LoadAccounts();
-
-            if (accounts.Any(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+            try
             {
-                message = "Účet s tímto jménem už existuje.";
+                List<AccountRecord> accounts = LoadAccounts();
+
+                if (accounts.Any(a => a.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+                {
+                    message = "Účet s tímto jménem už existuje.";
+                    logger.Log($"Neúspěšná registrace: {username} - účet už existuje");
+                    return false;
+                }
+
+                AccountRecord account = new AccountRecord
+                {
+                    Username = username,
+                    PasswordHash = ComputeSha256(password)
+                };
+
+                accounts.Add(account);
+                SaveAccounts(accounts);
+
+                message = "Registrace proběhla úspěšně.";
+                logger.Log($"Registrace nového hráče: {username}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Chyba při registraci uživatele {username}", ex);
+                message = "Při registraci nastala chyba.";
                 return false;
             }
-
-            AccountRecord account = new AccountRecord
-            {
-                Username = username,
-                PasswordHash = ComputeSha256(password)
-            };
-
-            accounts.Add(account);
-            SaveAccounts(accounts);
-
-            message = "Registrace proběhla úspěšně.";
-            return true;
         }
 
         public bool Login(string username, string password, out string message)
         {
-            List<AccountRecord> accounts = LoadAccounts();
-
-            AccountRecord account = accounts.FirstOrDefault(a =>
-                a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-
-            if (account == null)
+            try
             {
-                message = "Účet neexistuje.";
+                List<AccountRecord> accounts = LoadAccounts();
+
+                AccountRecord account = accounts.FirstOrDefault(a =>
+                    a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+                if (account == null)
+                {
+                    message = "Účet neexistuje.";
+                    logger.Log($"Neúspěšné přihlášení: {username} - účet neexistuje");
+                    return false;
+                }
+
+                string hash = ComputeSha256(password);
+
+                if (account.PasswordHash != hash)
+                {
+                    message = "Nesprávné heslo.";
+                    logger.Log($"Neúspěšné přihlášení: {username} - špatné heslo");
+                    return false;
+                }
+
+                message = "Přihlášení proběhlo úspěšně.";
+                logger.Log($"Úspěšné přihlášení: {username}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Chyba při přihlášení uživatele {username}", ex);
+                message = "Při přihlášení nastala chyba.";
                 return false;
             }
-
-            string hash = ComputeSha256(password);
-
-            if (account.PasswordHash != hash)
-            {
-                message = "Nesprávné heslo.";
-                return false;
-            }
-
-            message = "Přihlášení proběhlo úspěšně.";
-            return true;
         }
 
         private List<AccountRecord> LoadAccounts()

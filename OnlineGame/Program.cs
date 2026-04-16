@@ -8,62 +8,79 @@
 
             //await server.Start(5050);
 
-            GameDataLoader loader = new GameDataLoader();
-            loader.LoadAll();
+            Logger logger = new Logger();
 
-            GameWorld world = new GameWorld();
-            world.SetRooms(loader.Rooms);
-            world.SetItems(loader.Items);
-            world.SetNpcs(loader.Npcs);
-            world.SetQuests(loader.Quests);
-
-            AccountService accountService = new AccountService();
-            SaveService saveService = new SaveService();
-
-            PlayerState player = AuthenticateUser(accountService, saveService);
-
-            GameEngine engine = new GameEngine(world);
-
-            Console.WriteLine();
-            Console.WriteLine("Hra spuštěna.");
-            Console.WriteLine("Napiš pomoc pro seznam příkazů.");
-            Console.WriteLine();
-            Console.WriteLine(engine.Look(player));
-
-            while (true)
+            try
             {
-                if (player.GameCompleted)
-                {
-                    saveService.SavePlayer(player);
-                    Console.WriteLine();
-                    Console.WriteLine("Hra byla dokončena.");
-                    break;
-                }
+                GameDataLoader loader = new GameDataLoader();
+                loader.LoadAll();
+                logger.Log("Herní data byla úspěšně načtena.");
+
+                GameWorld world = new GameWorld();
+                world.SetRooms(loader.Rooms);
+                world.SetItems(loader.Items);
+                world.SetNpcs(loader.Npcs);
+                world.SetQuests(loader.Quests);
+
+                AccountService accountService = new AccountService(logger);
+                SaveService saveService = new SaveService(logger);
+
+                PlayerState player = AuthenticateUser(accountService, saveService, logger);
+
+                GameEngine engine = new GameEngine(world);
+
+                logger.Log($"Hráč vstoupil do hry: {player.Name}");
 
                 Console.WriteLine();
-                Console.Write("> ");
-                string input = Console.ReadLine();
+                Console.WriteLine("Hra spuštěna.");
+                Console.WriteLine("Napiš pomoc pro seznam příkazů.");
+                Console.WriteLine();
+                Console.WriteLine(engine.Look(player));
 
-                if (string.IsNullOrWhiteSpace(input))
+                while (true)
                 {
-                    continue;
-                }
+                    if (player.GameCompleted)
+                    {
+                        saveService.SavePlayer(player);
+                        logger.Log($"Hráč dokončil hru: {player.Name}");
+                        Console.WriteLine();
+                        Console.WriteLine("Hra byla dokončena.");
+                        break;
+                    }
 
-                if (input.ToLower() == "konec")
-                {
+                    Console.WriteLine();
+                    Console.Write("> ");
+                    string input = Console.ReadLine();
+
+                    if (string.IsNullOrWhiteSpace(input))
+                    {
+                        continue;
+                    }
+
+                    logger.Log($"Příkaz hráče {player.Name}: {input}");
+
+                    if (input.ToLower() == "konec")
+                    {
+                        saveService.SavePlayer(player);
+                        logger.Log($"Hráč ukončil hru: {player.Name}");
+                        Console.WriteLine("Hra byla uložena.");
+                        break;
+                    }
+
+                    string result = engine.HandleCommand(player, input);
+                    Console.WriteLine(result);
+
                     saveService.SavePlayer(player);
-                    Console.WriteLine("Hra byla uložena.");
-                    break;
                 }
-
-                string result = engine.HandleCommand(player, input);
-                Console.WriteLine(result);
-
-                saveService.SavePlayer(player);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Neočekávaná chyba v hlavním programu", ex);
+                Console.WriteLine("Nastala neočekávaná chyba. Podívej se do logu.");
             }
         }
 
-        static PlayerState AuthenticateUser(AccountService accountService, SaveService saveService)
+        static PlayerState AuthenticateUser(AccountService accountService, SaveService saveService, Logger logger)
         {
             while (true)
             {
@@ -97,9 +114,11 @@
 
                         if (loadedPlayer != null)
                         {
+                            logger.Log($"Po registraci byl nalezen existující save: {username}");
                             return loadedPlayer;
                         }
 
+                        logger.Log($"Vytvořena nová hra pro hráče: {username}");
                         return new PlayerState
                         {
                             Name = username,
@@ -135,6 +154,7 @@
                         }
 
                         Console.WriteLine("Nebyl nalezen uložený stav. Vytváří se nová hra.");
+                        logger.Log($"Pro přihlášeného hráče nebyl nalezen save, vytvořena nová hra: {username}");
 
                         return new PlayerState
                         {
@@ -146,6 +166,7 @@
                 else
                 {
                     Console.WriteLine("Neplatná volba.");
+                    logger.Log($"Uživatel zadal neplatnou volbu v menu autentizace: {choice}");
                 }
 
                 Console.WriteLine();
