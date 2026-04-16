@@ -49,6 +49,15 @@ namespace OnlineGame
                 case "utoc":
                     return AttackNpc(player, argument);
 
+                case "pouzij":
+                    return UseItem(player, argument);
+
+                case "kup":
+                    return BuyItem(player, argument);
+
+                case "questy":
+                    return ShowQuests(player);
+
                 default:
                     return "Neznámý příkaz. Napiš pomoc.";
             }
@@ -65,7 +74,10 @@ vezmi <předmět> - vezme předmět z místnosti
 poloz <předmět> - položí předmět do místnosti
 inventar - zobrazí inventář
 mluv <npc> - promluví s NPC
-utoc <npc> - zaútočí na NPC";
+utoc <npc> - zaútočí na NPC
+pouzij <předmět> - použije předmět z inventáře
+kup <předmět> - koupí předmět od obchodníka
+questy - zobrazí úkoly";
         }
 
         public string Look(PlayerState player)
@@ -306,6 +318,8 @@ utoc <npc> - zaútočí na NPC";
                 return "NPC neexistuje.";
             }
 
+            TryActivateTalkQuest(player, targetNpc, room);
+
             string questResult = TryCompleteTalkQuest(player, targetNpc, room);
             if (!string.IsNullOrWhiteSpace(questResult))
             {
@@ -407,6 +421,148 @@ utoc <npc> - zaútočí na NPC";
             return sb.ToString().TrimEnd();
         }
 
+        public string UseItem(PlayerState player, string itemName)
+        {
+            if (string.IsNullOrWhiteSpace(itemName))
+            {
+                return "Musíš zadat název předmětu.";
+            }
+
+            string itemId = player.Inventory.FirstOrDefault(id =>
+            {
+                Item item = world.GetItem(id);
+                return item != null && item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase);
+            });
+
+            if (itemId == null)
+            {
+                return "Takový předmět nemáš.";
+            }
+
+            Item itemToUse = world.GetItem(itemId);
+
+            if (itemToUse == null)
+            {
+                return "Předmět neexistuje.";
+            }
+
+            if (itemToUse.Type != "consumable")
+            {
+                return "Tento předmět nejde použít.";
+            }
+
+            int oldHealth = player.Health;
+            player.Health += itemToUse.Heal;
+
+            if (player.Health > player.MaxHealth)
+            {
+                player.Health = player.MaxHealth;
+            }
+
+            player.Inventory.Remove(itemId);
+
+            int healed = player.Health - oldHealth;
+            return $"Použil jsi {itemToUse.Name}. Obnovil sis {healed} životů.";
+        }
+
+        public string BuyItem(PlayerState player, string itemName)
+        {
+            if (string.IsNullOrWhiteSpace(itemName))
+            {
+                return "Musíš zadat název předmětu.";
+            }
+
+            Room room = world.GetRoom(player.CurrentRoomId);
+
+            if (room == null)
+            {
+                return "Aktuální místnost neexistuje.";
+            }
+
+            Npc merchant = room.Npcs
+                .Select(id => world.GetNpc(id))
+                .FirstOrDefault(npc => npc != null && npc.IsMerchant);
+
+            if (merchant == null)
+            {
+                return "V této místnosti není žádný obchodník.";
+            }
+
+            string itemId = merchant.ShopItems.FirstOrDefault(id =>
+            {
+                Item item = world.GetItem(id);
+                return item != null && item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase);
+            });
+
+            if (itemId == null)
+            {
+                return $"{merchant.Name} tento předmět neprodává.";
+            }
+
+            if (player.Inventory.Count >= player.InventoryCapacity)
+            {
+                return "Inventář je plný.";
+            }
+
+            Item itemToBuy = world.GetItem(itemId);
+
+            if (itemToBuy == null)
+            {
+                return "Předmět neexistuje.";
+            }
+
+            int price = GetItemPrice(itemToBuy);
+
+            if (player.Gold < price)
+            {
+                return $"Nemáš dost zlata. Potřebuješ {price} zlata.";
+            }
+
+            player.Gold -= price;
+            player.Inventory.Add(itemId);
+
+            return $"Koupil jsi {itemToBuy.Name} za {price} zlata.";
+        }
+
+        public string ShowQuests(PlayerState player)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine("Questy:");
+
+            bool hasAny = false;
+
+            foreach (Quest quest in world.Quests.Values)
+            {
+                string status;
+
+                if (player.HasCompletedQuest(quest.Id))
+                {
+                    status = "splněn";
+                    hasAny = true;
+                }
+                else if (player.HasActiveQuest(quest.Id))
+                {
+                    status = "aktivní";
+                    hasAny = true;
+                }
+                else
+                {
+                    continue;
+                }
+
+                sb.AppendLine($"- {quest.Name} ({status})");
+                sb.AppendLine($"  {quest.Description}");
+            }
+
+            if (!hasAny)
+            {
+                sb.AppendLine("Žádné aktivní ani splněné questy.");
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
         private int GetNpcHealth(Npc npc)
         {
             if (!npcCurrentHealth.ContainsKey(npc.Id))
@@ -451,11 +607,44 @@ utoc <npc> - zaútočí na NPC";
             return $"Nepřítel upustil: {string.Join(", ", droppedNames)}";
         }
 
+        private void TryActivateTalkQuest(PlayerState player, Npc npc, Room room)
+        {
+            foreach (Quest quest in world.Quests.Values)
+            {
+                if (player.HasCompletedQuest(quest.Id) || player.HasActiveQuest(quest.Id))
+                {
+                    continue;
+                }
+
+                if (quest.QuestType != "talk_after_item")
+                {
+                    continue;
+                }
+
+                if (quest.TargetNpcId != npc.Id)
+                {
+                    continue;
+                }
+
+                if (quest.TargetRoomId != room.Id)
+                {
+                    continue;
+                }
+
+                player.ActiveQuests.Add(quest.Id);
+            }
+        }
+
         private string TryCompleteTalkQuest(PlayerState player, Npc npc, Room room)
         {
             foreach (Quest quest in world.Quests.Values)
             {
                 if (player.HasCompletedQuest(quest.Id))
+                {
+                    continue;
+                }
+
+                if (!player.HasActiveQuest(quest.Id))
                 {
                     continue;
                 }
@@ -477,9 +666,10 @@ utoc <npc> - zaútočí na NPC";
 
                 if (!string.IsNullOrWhiteSpace(quest.RequiredItemId) && !player.HasItem(quest.RequiredItemId))
                 {
-                    continue;
+                    return $"Pro splnění úkolu ještě potřebuješ předmět: {GetItemDisplayName(quest.RequiredItemId)}";
                 }
 
+                player.ActiveQuests.Remove(quest.Id);
                 player.CompletedQuests.Add(quest.Id);
 
                 StringBuilder sb = new StringBuilder();
@@ -539,6 +729,7 @@ utoc <npc> - zaútočí na NPC";
                     continue;
                 }
 
+                player.ActiveQuests.Remove(quest.Id);
                 player.CompletedQuests.Add(quest.Id);
 
                 StringBuilder sb = new StringBuilder();
@@ -565,6 +756,26 @@ utoc <npc> - zaútočí na NPC";
             }
 
             return null;
+        }
+
+        private int GetItemPrice(Item item)
+        {
+            if (item.Type == "consumable")
+            {
+                return 10;
+            }
+
+            if (item.Type == "weapon")
+            {
+                return 30;
+            }
+
+            if (item.Type == "key")
+            {
+                return 20;
+            }
+
+            return 15;
         }
 
         private string GetItemDisplayName(string itemId)

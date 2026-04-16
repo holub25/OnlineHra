@@ -18,6 +18,7 @@ namespace OnlineGame
         public bool GameCompleted { get; set; } = false;
 
         public HashSet<string> CompletedQuests { get; set; } = new();
+        public HashSet<string> ActiveQuests { get; set; } = new();
 
         public int GetAttack(GameWorld world)
         {
@@ -44,6 +45,11 @@ namespace OnlineGame
         public bool HasCompletedQuest(string questId)
         {
             return CompletedQuests.Contains(questId);
+        }
+
+        public bool HasActiveQuest(string questId)
+        {
+            return ActiveQuests.Contains(questId);
         }
     }
 }
