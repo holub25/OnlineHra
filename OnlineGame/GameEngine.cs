@@ -82,6 +82,11 @@ questy - zobrazí úkoly";
 
         public string Look(PlayerState player)
         {
+            return Look(player, new List<string>());
+        }
+
+        public string Look(PlayerState player, List<string> otherPlayers)
+        {
             Room room = world.GetRoom(player.CurrentRoomId);
 
             if (room == null)
@@ -101,12 +106,17 @@ questy - zobrazí úkoly";
                 ? string.Join(", ", room.Npcs.Select(GetNpcDisplayName))
                 : "žádné";
 
+            string players = otherPlayers != null && otherPlayers.Count > 0
+                ? string.Join(", ", otherPlayers)
+                : "žádní";
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"Jsi v místnosti: {room.Name}");
             sb.AppendLine($"Popis: {room.Description}");
             sb.AppendLine($"Východy: {exits}");
             sb.AppendLine($"Předměty: {items}");
             sb.AppendLine($"NPC: {npcs}");
+            sb.AppendLine($"Hráči: {players}");
 
             return sb.ToString().TrimEnd();
         }
