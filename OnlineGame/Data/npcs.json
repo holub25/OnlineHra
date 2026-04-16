@@ -1,10 +1,85 @@
-{
-  "exclude": [
-    "**/bin",
-    "**/bower_components",
-    "**/jspm_packages",
-    "**/node_modules",
-    "**/obj",
-    "**/platforms"
-  ]
-}
+[
+  {
+    "Id": "kuchar",
+    "Name": "kuchař",
+    "Role": "merchant",
+    "Description": "Starý lodní kuchař se zástěrou a nožem za pasem.",
+    "Dialogues": [
+      "Máš hlad? Něco ti prodám, ale nebude to zadarmo.",
+      "Kapitán je dnes nervózní. Na lodi se něco chystá."
+    ],
+    "Health": 30,
+    "Attack": 0,
+    "IsHostile": false,
+    "IsMerchant": true,
+    "IsFinalBoss": false,
+    "Drops": [],
+    "ShopItems": [ "jidlo" ]
+  },
+  {
+    "Id": "vezen",
+    "Name": "vězeň",
+    "Role": "friendly",
+    "Description": "Vyčerpaný muž zavřený v cele. Vypadá, že kapitána nenávidí.",
+    "Dialogues": [
+      "Dostaň mě ven a pomůžu ti proti kapitánovi.",
+      "Znám cestu ke kapitánovi. Ale nejdřív mě osvoboď."
+    ],
+    "Health": 20,
+    "Attack": 5,
+    "IsHostile": false,
+    "IsMerchant": false,
+    "IsFinalBoss": false,
+    "Drops": [],
+    "ShopItems": []
+  },
+  {
+    "Id": "pirat_paluba",
+    "Name": "pirát",
+    "Role": "enemy",
+    "Description": "Drsný pirát hlídkující po palubě.",
+    "Dialogues": [
+      "Co tu děláš? Kapitán tě nechce vidět zahálet."
+    ],
+    "Health": 30,
+    "Attack": 5,
+    "IsHostile": true,
+    "IsMerchant": false,
+    "IsFinalBoss": false,
+    "Drops": [ "zlato_pytlik" ],
+    "ShopItems": []
+  },
+  {
+    "Id": "straz_sklad",
+    "Name": "stráž",
+    "Role": "enemy",
+    "Description": "Silná stráž hlídající sklad.",
+    "Dialogues": [
+      "Nikdo se do skladu bez boje nedostane."
+    ],
+    "Health": 45,
+    "Attack": 8,
+    "IsHostile": true,
+    "IsMerchant": false,
+    "IsFinalBoss": false,
+    "Drops": [ "jidlo" ],
+    "ShopItems": []
+  },
+  {
+    "Id": "kapitan",
+    "Name": "kapitán",
+    "Role": "boss",
+    "Description": "Krutý kapitán pirátské lodi. Tohle je tvůj finální protivník.",
+    "Dialogues": [
+      "Tak přece ses rozhodl vzbouřit.",
+      "Tuhle loď mi nevezmeš!"
+    ],
+    "Health": 80,
+    "Attack": 15,
+    "IsHostile": true,
+    "IsMerchant": false,
+    "IsFinalBoss": true,
+    "Drops": [],
+    "ShopItems": []
+  }
+]

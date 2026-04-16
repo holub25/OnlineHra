@@ -1,10 +1,28 @@
-{
-  "exclude": [
-    "**/bin",
-    "**/bower_components",
-    "**/jspm_packages",
-    "**/node_modules",
-    "**/obj",
-    "**/platforms"
-  ]
-}
+[
+  {
+    "Id": "osvobod_vezne",
+    "Name": "Osvoboď vězně",
+    "Description": "Najdi klíč od cely a osvoboď vězně, který ti může pomoci proti kapitánovi.",
+    "QuestType": "talk_after_item",
+    "RequiredItemId": "klic_od_vezeni",
+    "TargetNpcId": "vezen",
+    "TargetRoomId": "vezeni",
+    "RewardItemId": null,
+    "RewardGold": 0,
+    "UnlocksRoomId": "kajuta_kapitana",
+    "MarksGameProgress": true
+  },
+  {
+    "Id": "poraz_kapitana",
+    "Name": "Poraz kapitána",
+    "Description": "Dostaň se do kajuty kapitána a poraz ho v souboji.",
+    "QuestType": "kill_npc",
+    "RequiredItemId": "mec",
+    "TargetNpcId": "kapitan",
+    "TargetRoomId": "kajuta_kapitana",
+    "RewardItemId": null,
+    "RewardGold": 100,
+    "UnlocksRoomId": null,
+    "MarksGameProgress": true
+  }
+]

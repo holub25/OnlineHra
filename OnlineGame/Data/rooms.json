@@ -1,10 +1,112 @@
-{
-  "exclude": [
-    "**/bin",
-    "**/bower_components",
-    "**/jspm_packages",
-    "**/node_modules",
-    "**/obj",
-    "**/platforms"
-  ]
-}
+[
+  {
+    "Id": "paluba",
+    "Name": "Paluba",
+    "Description": "Hlavní paluba pirátské lodi. Mořský vítr ti fouká do obličeje a kolem jsou natažená lana.",
+    "Exits": {
+      "dolu": "podpalubi",
+      "vychod": "kajuty_posadky",
+      "nahoru": "kapitanska_chodba"
+    },
+    "Items": [],
+    "Npcs": [ "pirat_paluba" ],
+    "IsLocked": false,
+    "RequiredItemId": null,
+    "RequiredQuestId": null
+  },
+  {
+    "Id": "podpalubi",
+    "Name": "Podpalubí",
+    "Description": "Temné a vlhké podpalubí plné sudů, beden a starých provazů.",
+    "Exits": {
+      "nahoru": "paluba",
+      "vychod": "sklad",
+      "zapad": "vezeni"
+    },
+    "Items": [ "klic_od_vezeni" ],
+    "Npcs": [],
+    "IsLocked": false,
+    "RequiredItemId": null,
+    "RequiredQuestId": null
+  },
+  {
+    "Id": "kajuty_posadky",
+    "Name": "Kajuty posádky",
+    "Description": "Úzké kajuty s hamakami, truhlami a rozházeným oblečením pirátů.",
+    "Exits": {
+      "zapad": "paluba",
+      "dolu": "kuchyne"
+    },
+    "Items": [ "mec" ],
+    "Npcs": [],
+    "IsLocked": false,
+    "RequiredItemId": null,
+    "RequiredQuestId": null
+  },
+  {
+    "Id": "sklad",
+    "Name": "Sklad",
+    "Description": "Sklad plný beden se zásobami, jídlem a pytli zlata.",
+    "Exits": {
+      "zapad": "podpalubi"
+    },
+    "Items": [ "zlato_pytlik" ],
+    "Npcs": [ "straz_sklad" ],
+    "IsLocked": false,
+    "RequiredItemId": null,
+    "RequiredQuestId": null
+  },
+  {
+    "Id": "kuchyne",
+    "Name": "Kuchyně",
+    "Description": "Rozpálená lodní kuchyně plná kotlů, pánví a vůně jídla.",
+    "Exits": {
+      "nahoru": "kajuty_posadky"
+    },
+    "Items": [ "jidlo" ],
+    "Npcs": [ "kuchar" ],
+    "IsLocked": false,
+    "RequiredItemId": null,
+    "RequiredQuestId": null
+  },
+  {
+    "Id": "vezeni",
+    "Name": "Vězení",
+    "Description": "Malá temná cela s rezavými mřížemi. Uvnitř sedí vyčerpaný vězeň.",
+    "Exits": {
+      "vychod": "podpalubi"
+    },
+    "Items": [],
+    "Npcs": [ "vezen" ],
+    "IsLocked": true,
+    "RequiredItemId": "klic_od_vezeni",
+    "RequiredQuestId": null
+  },
+  {
+    "Id": "kapitanska_chodba",
+    "Name": "Kapitánská chodba",
+    "Description": "Úzká chodba vedoucí ke dveřím kapitánovy kajuty.",
+    "Exits": {
+      "dolu": "paluba",
+      "vychod": "kajuta_kapitana"
+    },
+    "Items": [],
+    "Npcs": [],
+    "IsLocked": false,
+    "RequiredItemId": null,
+    "RequiredQuestId": "osvobod_vezne"
+  },
+  {
+    "Id": "kajuta_kapitana",
+    "Name": "Kajuta kapitána",
+    "Description": "Luxusní kajuta s mapami, zlatem, zbraněmi a těžkým stolem uprostřed místnosti.",
+    "Exits": {
+      "zapad": "kapitanska_chodba"
+    },
+    "Items": [],
+    "Npcs": [ "kapitan" ],
+    "IsLocked": true,
+    "RequiredItemId": null,
+    "RequiredQuestId": "osvobod_vezne"
+  }
+]

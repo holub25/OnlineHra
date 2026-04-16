@@ -1,10 +1,57 @@
-{
-  "exclude": [
-    "**/bin",
-    "**/bower_components",
-    "**/jspm_packages",
-    "**/node_modules",
-    "**/obj",
-    "**/platforms"
-  ]
-}
+[
+  {
+    "Id": "klic_od_vezeni",
+    "Name": "klíč",
+    "Description": "Rezavý klíč od vězeňské cely.",
+    "Type": "key",
+    "Damage": 0,
+    "Heal": 0,
+    "GoldValue": 0,
+    "CanBeDropped": true,
+    "QuestItem": false
+  },
+  {
+    "Id": "mec",
+    "Name": "meč",
+    "Description": "Ostrý pirátský meč. Hodí se do boje.",
+    "Type": "weapon",
+    "Damage": 10,
+    "Heal": 0,
+    "GoldValue": 0,
+    "CanBeDropped": true,
+    "QuestItem": false
+  },
+  {
+    "Id": "jidlo",
+    "Name": "jídlo",
+    "Description": "Porce jídla, která obnoví trochu zdraví.",
+    "Type": "consumable",
+    "Damage": 0,
+    "Heal": 20,
+    "GoldValue": 0,
+    "CanBeDropped": true,
+    "QuestItem": false
+  },
+  {
+    "Id": "zlato_pytlik",
+    "Name": "zlato",
+    "Description": "Pytlík se zlaťáky. Dá se použít při obchodování.",
+    "Type": "currency",
+    "Damage": 0,
+    "Heal": 0,
+    "GoldValue": 25,
+    "CanBeDropped": true,
+    "QuestItem": false
+  },
+  {
+    "Id": "stary_kompas",
+    "Name": "kompas",
+    "Description": "Starý kompas, který kdysi patřil důstojníkovi lodi.",
+    "Type": "quest",
+    "Damage": 0,
+    "Heal": 0,
+    "GoldValue": 0,
+    "CanBeDropped": false,
+    "QuestItem": true
+  }
+]
