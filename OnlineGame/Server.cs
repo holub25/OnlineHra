@@ -1,51 +1,121 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace OnlineGame
 {
     internal class Server
     {
-        private TcpListener listener;
-        private List<Player> players = new();
+        private readonly Logger logger;
+        private readonly GameWorld world;
+        private readonly GameEngine engine;
+        private readonly AccountService accountService;
+        private readonly SaveService saveService;
 
-        public async Task Start(int port)
+        private TcpListener listener;
+        private readonly List<ClientSession> clients = new();
+        private readonly object clientsLock = new object();
+
+        public Server(
+            Logger logger,
+            GameWorld world,
+            GameEngine engine,
+            AccountService accountService,
+            SaveService saveService)
+        {
+            this.logger = logger;
+            this.world = world;
+            this.engine = engine;
+            this.accountService = accountService;
+            this.saveService = saveService;
+        }
+
+        public async Task StartAsync(int port)
         {
             listener = new TcpListener(IPAddress.Any, port);
             listener.Start();
 
-            Console.WriteLine("SERVER BEZI");
+            logger.Log($"Server spuštěn na portu {port}");
+            Console.WriteLine($"Server běží na portu {port}");
 
             while (true)
             {
-                var tcpClient = await listener.AcceptTcpClientAsync();
+                TcpClient tcpClient = await listener.AcceptTcpClientAsync();
 
-                var client = new Player(tcpClient, this);
+                ClientSession session = new ClientSession(
+                    tcpClient,
+                    this,
+                    logger,
+                    world,
+                    engine,
+                    accountService,
+                    saveService);
 
-                players.Add(client);
+                AddClient(session);
 
-                _ = client.JoinChat();
+                _ = session.HandleAsync();
             }
         }
 
-        public void BroadCast(string msg, Player sender)
+        public void AddClient(ClientSession client)
         {
-            foreach(var client in players)
+            lock (clientsLock)
             {
-                if(client != sender)
+                clients.Add(client);
+            }
+        }
+
+        public void RemoveClient(ClientSession client)
+        {
+            lock (clientsLock)
+            {
+                clients.Remove(client);
+            }
+        }
+
+        public List<ClientSession> GetClientsInRoom(string roomId)
+        {
+            lock (clientsLock)
+            {
+                return clients
+                    .Where(c => c.Player != null && c.Player.CurrentRoomId == roomId)
+                    .ToList();
+            }
+        }
+
+        public List<ClientSession> GetAllAuthenticatedClients()
+        {
+            lock (clientsLock)
+            {
+                return clients
+                    .Where(c => c.Player != null)
+                    .ToList();
+            }
+        }
+
+        public void BroadcastToRoom(string roomId, string message, ClientSession sender = null)
+        {
+            List<ClientSession> roomClients = GetClientsInRoom(roomId);
+
+            foreach (ClientSession client in roomClients)
+            {
+                if (client != sender)
                 {
-                    client.Send(msg);
+                    client.Send(message);
                 }
             }
         }
 
-        public void Remove(Player player)
+        public void BroadcastToAll(string message, ClientSession sender = null)
         {
-            players.Remove(player);
+            List<ClientSession> allClients = GetAllAuthenticatedClients();
+
+            foreach (ClientSession client in allClients)
+            {
+                if (client != sender)
+                {
+                    client.Send(message);
+                }
+            }
         }
     }
 }
