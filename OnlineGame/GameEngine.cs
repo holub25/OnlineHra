@@ -5,6 +5,7 @@ namespace OnlineGame
     internal class GameEngine
     {
         private readonly GameWorld world;
+        private readonly Dictionary<string, int> npcCurrentHealth = new();
 
         public GameEngine(GameWorld world)
         {
@@ -45,6 +46,9 @@ namespace OnlineGame
                 case "mluv":
                     return TalkToNpc(player, argument);
 
+                case "utoc":
+                    return AttackNpc(player, argument);
+
                 default:
                     return "Neznámý příkaz. Napiš pomoc.";
             }
@@ -60,7 +64,8 @@ jdi <směr> - přesun do jiné místnosti
 vezmi <předmět> - vezme předmět z místnosti
 poloz <předmět> - položí předmět do místnosti
 inventar - zobrazí inventář
-mluv <npc> - promluví s NPC";
+mluv <npc> - promluví s NPC
+utoc <npc> - zaútočí na NPC";
         }
 
         public string Look(PlayerState player)
@@ -262,7 +267,7 @@ mluv <npc> - promluví s NPC";
                 }
             }
 
-            sb.AppendLine($"Životy: {player.Health}");
+            sb.AppendLine($"Životy: {player.Health}/{player.MaxHealth}");
             sb.AppendLine($"Síla: {player.GetAttack(world)}");
             sb.AppendLine($"Zlato: {player.Gold}");
 
@@ -313,6 +318,137 @@ mluv <npc> - promluví s NPC";
             }
 
             return $"{targetNpc.Name}: {targetNpc.Dialogues[0]}";
+        }
+
+        public string AttackNpc(PlayerState player, string npcName)
+        {
+            if (string.IsNullOrWhiteSpace(npcName))
+            {
+                return "Musíš zadat jméno NPC.";
+            }
+
+            Room room = world.GetRoom(player.CurrentRoomId);
+
+            if (room == null)
+            {
+                return "Aktuální místnost neexistuje.";
+            }
+
+            string npcId = room.Npcs.FirstOrDefault(id =>
+            {
+                Npc npc = world.GetNpc(id);
+                return npc != null && npc.Name.Equals(npcName, StringComparison.OrdinalIgnoreCase);
+            });
+
+            if (npcId == null)
+            {
+                return "Taková postava tu není.";
+            }
+
+            Npc npc = world.GetNpc(npcId);
+
+            if (npc == null)
+            {
+                return "NPC neexistuje.";
+            }
+
+            if (!npc.IsHostile && !npc.IsFinalBoss)
+            {
+                return "Na tuto postavu nemůžeš útočit.";
+            }
+
+            int npcHealth = GetNpcHealth(npc);
+            int playerDamage = player.GetAttack(world);
+
+            npcHealth -= playerDamage;
+            npcCurrentHealth[npc.Id] = npcHealth;
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Zaútočil jsi na {npc.Name} a způsobil jsi {playerDamage} poškození.");
+
+            if (npcHealth > 0)
+            {
+                player.Health -= npc.Attack;
+                sb.AppendLine($"{npc.Name} přežil. Zbývá mu {npcHealth} životů.");
+                sb.AppendLine($"{npc.Name} ti oplatil útok za {npc.Attack} poškození.");
+
+                if (player.Health <= 0)
+                {
+                    HandlePlayerDeath(player);
+                    sb.AppendLine("Byl jsi poražen. Probudil ses znovu na palubě se 100 životy.");
+                }
+
+                return sb.ToString().TrimEnd();
+            }
+
+            room.Npcs.Remove(npc.Id);
+            npcCurrentHealth.Remove(npc.Id);
+
+            sb.AppendLine($"Porazil jsi {npc.Name}.");
+
+            string dropResult = GiveNpcDrops(room, npc);
+            if (!string.IsNullOrWhiteSpace(dropResult))
+            {
+                sb.AppendLine(dropResult);
+            }
+
+            string questResult = TryCompleteKillQuest(player, npc, room);
+            if (!string.IsNullOrWhiteSpace(questResult))
+            {
+                sb.AppendLine(questResult);
+            }
+
+            if (npc.IsFinalBoss)
+            {
+                player.GameCompleted = true;
+                sb.AppendLine("VYHRÁL JSI HRU. Převzal jsi kontrolu nad pirátskou lodí.");
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
+        private int GetNpcHealth(Npc npc)
+        {
+            if (!npcCurrentHealth.ContainsKey(npc.Id))
+            {
+                npcCurrentHealth[npc.Id] = npc.Health;
+            }
+
+            return npcCurrentHealth[npc.Id];
+        }
+
+        private void HandlePlayerDeath(PlayerState player)
+        {
+            player.Health = player.MaxHealth;
+            player.CurrentRoomId = "paluba";
+        }
+
+        private string GiveNpcDrops(Room room, Npc npc)
+        {
+            if (npc.Drops == null || npc.Drops.Count == 0)
+            {
+                return null;
+            }
+
+            List<string> droppedNames = new List<string>();
+
+            foreach (string dropId in npc.Drops)
+            {
+                Item item = world.GetItem(dropId);
+
+                if (item != null)
+                {
+                    room.Items.Add(dropId);
+                    droppedNames.Add(item.Name);
+                }
+            }
+
+            if (droppedNames.Count == 0)
+            {
+                return null;
+            }
+
+            return $"Nepřítel upustil: {string.Join(", ", droppedNames)}";
         }
 
         private string TryCompleteTalkQuest(PlayerState player, Npc npc, Room room)
@@ -367,6 +503,63 @@ mluv <npc> - promluví s NPC";
                 }
 
                 sb.AppendLine($"{npc.Name}: {npc.Dialogues.FirstOrDefault() ?? "Děkuji."}");
+
+                return sb.ToString().TrimEnd();
+            }
+
+            return null;
+        }
+
+        private string TryCompleteKillQuest(PlayerState player, Npc npc, Room room)
+        {
+            foreach (Quest quest in world.Quests.Values)
+            {
+                if (player.HasCompletedQuest(quest.Id))
+                {
+                    continue;
+                }
+
+                if (quest.QuestType != "kill_npc")
+                {
+                    continue;
+                }
+
+                if (quest.TargetNpcId != npc.Id)
+                {
+                    continue;
+                }
+
+                if (quest.TargetRoomId != room.Id)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(quest.RequiredItemId) && !player.HasItem(quest.RequiredItemId))
+                {
+                    continue;
+                }
+
+                player.CompletedQuests.Add(quest.Id);
+
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"Splnil jsi úkol: {quest.Name}");
+
+                if (!string.IsNullOrWhiteSpace(quest.RewardItemId))
+                {
+                    Item rewardItem = world.GetItem(quest.RewardItemId);
+
+                    if (rewardItem != null)
+                    {
+                        player.Inventory.Add(rewardItem.Id);
+                        sb.AppendLine($"Získal jsi předmět: {rewardItem.Name}");
+                    }
+                }
+
+                if (quest.RewardGold > 0)
+                {
+                    player.Gold += quest.RewardGold;
+                    sb.AppendLine($"Získal jsi {quest.RewardGold} zlata.");
+                }
 
                 return sb.ToString().TrimEnd();
             }

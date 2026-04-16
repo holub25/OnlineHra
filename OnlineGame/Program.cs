@@ -32,6 +32,13 @@
 
             while (true)
             {
+                if (player.GameCompleted)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Hra byla dokončena.");
+                    break;
+                }
+
                 Console.WriteLine();
                 Console.Write("> ");
                 string input = Console.ReadLine();

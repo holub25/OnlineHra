@@ -11,8 +11,11 @@ namespace OnlineGame
         public int InventoryCapacity { get; set; } = 5;
 
         public int Health { get; set; } = 100;
+        public int MaxHealth { get; set; } = 100;
         public int BaseAttack { get; set; } = 5;
         public int Gold { get; set; } = 0;
+
+        public bool GameCompleted { get; set; } = false;
 
         public HashSet<string> CompletedQuests { get; set; } = new();
 
